@@ -8,6 +8,7 @@ import asyncio
 from pyrogram import Client, filters 
 from pyrogram.errors.exceptions.bad_request_400 import MessageTooLong
 from pyrogram.types import *
+from pyrogram.handlers import PreCheckoutQueryHandler
 
 
 @Client.on_message(filters.command("remove_premium") & filters.user(ADMINS))
@@ -224,8 +225,9 @@ async def premium_button(client, callback_query: CallbackQuery):
             await callback_query.answer("⚠️ Invalid Premium Package.", show_alert=True)
     except Exception as e:
         print(f"Error In buy_ - {e}")
- 
-@Client.on_message(filters.pre_checkout_query)
+
+
+# Pre-checkout query handler - registered manually
 async def pre_checkout_handler(client, query: PreCheckoutQuery):
     try:
         if query.invoice_payload.startswith("unzippremium_"):
@@ -235,6 +237,13 @@ async def pre_checkout_handler(client, query: PreCheckoutQuery):
     except Exception as e:
         print(f"Pre-checkout error: {e}")
         await query.answer(ok=False, error_message="🚫 Unexpected Error Occurred.")
+
+
+# Register the handler at module level
+def register_pre_checkout_handler(client):
+    """This function should be called from bot.py after client initialization"""
+    client.add_handler(PreCheckoutQueryHandler(pre_checkout_handler))
+
 
 @Client.on_message(filters.successful_payment)
 async def successful_premium_payment(client, message):
