@@ -2,17 +2,17 @@ import os
 from os import environ
 
 # Bot Configuration
-API_ID = int(environ.get("API_ID", ""))
-API_HASH = environ.get("API_HASH", "")
-BOT_TOKEN = environ.get("BOT_TOKEN", "")
-STRING_SESSION = environ.get("STRING_SESSION", "")
+API_ID = 20288994
+API_HASH = "d702614912f1ad370a0d18786002adbf"
+BOT_TOKEN = "8554527007:AAHauMXOFjMIggCbeAJK08L4EuInrz61Mdc"
+STRING_SESSION = "BQE1leIAQ91QBxeeXOVyv4pFbVCZlK-lwgQCTge8tptNm8H8K3s1LedpPDYDOKhyqkNztGmXMOuBIfwezqN02GRf6NPEEtLI_78tNqvV9Amb_0Iw3FA-cJwYX-AnRYWG_dqTvfNWoA8lIa2GTz3SSsZdu2l8eb4rfQHxCGSsbAy5leT7yJbOWDzCWFA2_iLnEgPoovkmTMuliKmyvAe6feHfaPGCd-pLCpRKSE26S1UzsG0Tw0M1JJZVGqfOrx9_CiREP1oytxPMUVBTAzQNlJn6L1EeYwZ38qQ9kKqw8M3mBysKo6UhzwGbX1eV84Le5DiZAUezBw7CZnWbj1ZVTvBWut2kZQAAAAHjUB8sAA"
 
 # Database
-DATABASE_URI = environ.get("DATABASE_URI", "")
-DATABASE_NAME = environ.get("DATABASE_NAME", "unzip_bot")
+DATABASE_URI = "mongodb+srv://Zerobothost:zero8907@cluster0.szwdcyb.mongodb.net/?appName=Cluster0"
+DATABASE_NAME = "Cluster0"
 
 # Admins
-ADMINS = [int(admin) if admin.isdigit() else admin for admin in environ.get('ADMINS', '').split()]
+ADMINS = [8498741978]
 
 # Channels
 FORCE_SUB_CHANNELS = [
@@ -21,7 +21,7 @@ FORCE_SUB_CHANNELS = [
 ]
 
 # URLs
-SUPPORT_CHAT = environ.get("SUPPORT_CHAT", "https://t.me/zerodev2")
+SUPPORT_CHAT = "https://t.me/zerodev2"
 OWNER_USERNAME = "@Venuboyy"
 
 # Limits
@@ -37,7 +37,7 @@ STAR_PREMIUM_PLANS = {
 }
 
 # Logs
-PREMIUM_LOGS = int(environ.get("PREMIUM_LOGS", "0"))
+PREMIUM_LOGS = -1003853860662
 
 # Images
 SUBSCRIPTION = "https://i.ibb.co/gMrpRQWP/photo-2025-07-09-05-21-32-7524948058832896004.jpg"
