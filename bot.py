@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from pyrogram import Client
+from pyrogram import Client, idle
 from info import API_ID, API_HASH, BOT_TOKEN, STRING_SESSION
 from database.users_chats_db import db
 from utils import temp
@@ -66,7 +66,7 @@ if STRING_SESSION:
 
         async def stop(self, *args):
             await super().stop()
-            logging.info("UserBot stopped!")
+            logging.info("UserBot stopped!"")
 
     user_bot = UserBot()
 else:
@@ -79,9 +79,14 @@ async def main():
         await bot.start()
         if user_bot:
             await user_bot.start()
-        await asyncio.Event().wait()
+        
+        # IMPORTANT: Use idle() to keep the bot running and processing messages
+        await idle()
+        
     except KeyboardInterrupt:
-        pass
+        logging.info("Bot stopped by user")
+    except Exception as e:
+        logging.error(f"Error: {e}")
     finally:
         await bot.stop()
         if user_bot:
