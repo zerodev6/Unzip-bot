@@ -1,14 +1,18 @@
 import pytz
 import datetime
-from Script import script 
-from info import *
+from script import script 
+from config import Config
 from utils import get_seconds, temp
-from database.users_chats_db import db 
+from database import db 
 import asyncio
 from pyrogram import Client, filters 
 from pyrogram.errors.exceptions.bad_request_400 import MessageTooLong
 from pyrogram.types import *
 
+ADMINS = Config.ADMINS
+PREMIUM_LOGS = Config.PREMIUM_LOGS
+STAR_PREMIUM_PLANS = Config.STAR_PREMIUM_PLANS
+SUBSCRIPTION = "https://i.ibb.co/gMrpRQWP/photo-2025-07-09-05-21-32-7524948058832896004.jpg"
 
 @Client.on_message(filters.command("remove_premium") & filters.user(ADMINS))
 async def remove_premium(client, message):
@@ -25,7 +29,6 @@ async def remove_premium(client, message):
             await message.reply_text("ᴜɴᴀʙʟᴇ ᴛᴏ ʀᴇᴍᴏᴠᴇ ᴜꜱᴇᴅ !\nᴀʀᴇ ʏᴏᴜ ꜱᴜʀᴇ, ɪᴛ ᴡᴀꜱ ᴀ ᴘʀᴇᴍɪᴜᴍ ᴜꜱᴇʀ ɪᴅ ?")
     else:
         await message.reply_text("ᴜꜱᴀɢᴇ : /remove_premium user_id") 
-
 
 @Client.on_message(filters.command("myplan"))
 async def myplan(client, message):
@@ -119,8 +122,7 @@ async def give_premium_cmd_handler(client, message):
                 chat_id=user_id,
                 text=f"👋 ʜᴇʏ {user.mention},\nᴛʜᴀɴᴋ ʏᴏᴜ ꜰᴏʀ ᴘᴜʀᴄʜᴀꜱɪɴɢ ᴘʀᴇᴍɪᴜᴍ.\nᴇɴᴊᴏʏ !! ✨🎉\n\n⏰ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ : <code>{time}</code>\n⏳ ᴊᴏɪɴɪɴɢ ᴅᴀᴛᴇ : {current_time}\n\n⌛️ ᴇxᴘɪʀʏ ᴅᴀᴛᴇ : {expiry_str_in_ist}", disable_web_page_preview=True              
             )    
-            if PREMIUM_LOGS:
-                await client.send_message(PREMIUM_LOGS, text=f"#Added_Premium\n\n👤 ᴜꜱᴇʀ : {user.mention}\n⚡ ᴜꜱᴇʀ ɪᴅ : <code>{user_id}</code>\n⏰ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ : <code>{time}</code>\n\n⏳ ᴊᴏɪɴɪɴɢ ᴅᴀᴛᴇ : {current_time}\n\n⌛️ ᴇxᴘɪʀʏ ᴅᴀᴛᴇ : {expiry_str_in_ist}", disable_web_page_preview=True)
+            await client.send_message(PREMIUM_LOGS, text=f"#Added_Premium\n\n👤 ᴜꜱᴇʀ : {user.mention}\n⚡ ᴜꜱᴇʀ ɪᴅ : <code>{user_id}</code>\n⏰ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ : <code>{time}</code>\n\n⏳ ᴊᴏɪɴɪɴɢ ᴅᴀᴛᴇ : {current_time}\n\n⌛️ ᴇxᴘɪʀʏ ᴅᴀᴛᴇ : {expiry_str_in_ist}", disable_web_page_preview=True)
                     
         else:
             await message.reply_text(
@@ -163,7 +165,6 @@ async def premium_user(client, message):
             outfile.write(new)
         await message.reply_document('usersplan.txt', caption="Paid Users:")
 
-
 @Client.on_message(filters.command("plan"))
 async def plan(client, message):
     user_id = message.from_user.id
@@ -173,9 +174,6 @@ async def plan(client, message):
         f"- ɪᴅ - `{user_id}`\n- ɴᴀᴍᴇ - {users}</b>")
     btn = [[
             InlineKeyboardButton('• ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ •', callback_data='buy_info'),
-        ],[
-            InlineKeyboardButton('• ʀᴇꜰᴇʀ ꜰʀɪᴇɴᴅꜱ', callback_data='reffff'),
-            InlineKeyboardButton('ꜰʀᴇᴇ ᴛʀɪᴀʟ •', callback_data='free')
         ],[
             InlineKeyboardButton('🚫 ᴄʟᴏꜱᴇ 🚫', callback_data='close_data')
         ]]
@@ -190,10 +188,9 @@ async def plan(client, message):
     await msg.delete()
     await message.delete()
 
-
-# Telegram Star Payment Method
+# Telegram Star Payment
 @Client.on_callback_query(filters.regex(r"buy_\d+"))
-async def premium_button(client, callback_query: CallbackQuery):
+async def premium_button(client, callback_query):
     try:
         amount = int(callback_query.data.split("_")[1])
         if amount in STAR_PREMIUM_PLANS:
@@ -206,7 +203,7 @@ async def premium_button(client, callback_query: CallbackQuery):
                     chat_id=callback_query.message.chat.id,
                     title="Premium Subscription",
                     description=f"Pay {amount} Star And Get Premium For {STAR_PREMIUM_PLANS[amount]}",
-                    payload=f"unzippremium_{amount}",
+                    payload=f"renamepremium_{amount}",
                     currency="XTR",
                     prices=[
                         LabeledPrice(
@@ -224,25 +221,35 @@ async def premium_button(client, callback_query: CallbackQuery):
             await callback_query.answer("⚠️ Invalid Premium Package.", show_alert=True)
     except Exception as e:
         print(f"Error In buy_ - {e}")
- 
-@Client.on_pre_checkout_query()
-async def pre_checkout_handler(client, query: PreCheckoutQuery):
-    try:
-        if query.payload.startswith("unzippremium_"):
-            await query.answer(success=True)
-        else:
-            await query.answer(success=False, error_message="⚠️ Invalid Purchase Type.", show_alert=True)
-    except Exception as e:
-        print(f"Pre-checkout error: {e}")
-        await query.answer(success=False, error_message="🚫 Unexpected Error Occurred." , show_alert=True)
 
-@Client.on_message(filters.successful_payment)
+# ============================================================================
+# FIXED: Proper filter for successful payments
+# This fixes the AttributeError: 'Message' object has no attribute 'successful_payment'
+# ============================================================================
+def successful_payment_filter(_, __, message):
+    """Filter to detect successful payment messages - FIXED VERSION"""
+    try:
+        # Check if the message has the successful_payment attribute and it's not None
+        return hasattr(message, 'successful_payment') and message.successful_payment is not None
+    except AttributeError:
+        return False
+
+# Create the filter using Pyrogram's create method
+successful_payment = filters.create(successful_payment_filter)
+ 
+@Client.on_message(successful_payment & filters.private)
 async def successful_premium_payment(client, message):
     try:
         amount = int(message.successful_payment.total_amount)
         user_id = message.from_user.id
         time_zone = datetime.datetime.now(pytz.timezone("Asia/Kolkata"))
         current_time = time_zone.strftime("%d-%m-%Y | %I:%M:%S %p") 
+        
+        # Get amount from invoice payload
+        payload = message.successful_payment.invoice_payload
+        if payload.startswith("renamepremium_"):
+            amount = int(payload.split("_")[1])
+        
         if amount in STAR_PREMIUM_PLANS:
             time = STAR_PREMIUM_PLANS[amount]
             seconds = await get_seconds(time)
@@ -255,7 +262,7 @@ async def successful_premium_payment(client, message):
                 expiry_str_in_ist = expiry.astimezone(pytz.timezone("Asia/Kolkata")).strftime("%d-%m-%Y | %I:%M:%S %p")    
                 await message.reply(text=f"Thankyou For Purchasing Premium Service Using Star ✅\n\nSubscribtion Time - {time}\nExpire In - {expiry_str_in_ist}", disable_web_page_preview=True)                
                 if PREMIUM_LOGS:
-                    await client.send_message(PREMIUM_LOGS, text=f"#Purchase_Premium_With_Start\n\n👤 ᴜꜱᴇʀ - {message.from_user.mention}\n\n⚡ ᴜꜱᴇʀ ɪᴅ - <code>{user_id}</code>\n\n🚫 ꜱᴛᴀʀ ᴘᴀʏ - {amount}⭐\n\n⏰ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ - {time}\n\n⌛️ ᴊᴏɪɴɪɴɢ ᴅᴀᴛᴇ - {current_time}\n\n⌛️ ᴇxᴘɪʀʏ ᴅᴀᴛᴇ - {expiry_str_in_ist}", disable_web_page_preview=True)
+                    await client.send_message(PREMIUM_LOGS, text=f"#Purchase_Premium_With_Star\n\n👤 ᴜꜱᴇʀ - {message.from_user.mention}\n\n⚡ ᴜꜱᴇʀ ɪᴅ - <code>{user_id}</code>\n\n🚫 ꜱᴛᴀʀ ᴘᴀʏ - {amount}⭐\n\n⏰ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ - {time}\n\n⌛️ ᴊᴏɪɴɪɴɢ ᴅᴀᴛᴇ - {current_time}\n\n⌛️ ᴇxᴘɪʀʏ ᴅᴀᴛᴇ - {expiry_str_in_ist}", disable_web_page_preview=True)
             else:
                 await message.reply("⚠️ Invalid Premium Time.")
         else:
@@ -263,42 +270,3 @@ async def successful_premium_payment(client, message):
     except Exception as e:
         print(f"Error Processing Premium Payment: {e}")
         await message.reply("✅ Thank You For Your Payment! (Error Logging Details)")
-
-@Client.on_callback_query(filters.regex("^premium_info$"))
-async def premium_info_callback(client, callback_query):
-    buttons = [
-        [InlineKeyboardButton("💳 100⭐ - 1 Month", callback_data="buy_100")],
-        [InlineKeyboardButton("💳 250⭐ - 3 Months", callback_data="buy_250")],
-        [InlineKeyboardButton("💳 400⭐ - 6 Months", callback_data="buy_400")],
-        [InlineKeyboardButton("💳 700⭐ - 1 Year", callback_data="buy_700")],
-        [InlineKeyboardButton("🔙 Back", callback_data="start")]
-    ]
-    
-    await callback_query.message.edit_text(
-        script.BPREMIUM_TXT,
-        reply_markup=InlineKeyboardMarkup(buttons)
-    )
-
-@Client.on_callback_query(filters.regex("^buy_info$"))
-async def buy_info_callback(client, callback_query):
-    buttons = [
-        [InlineKeyboardButton("💳 100⭐ - 1 Month", callback_data="buy_100")],
-        [InlineKeyboardButton("💳 250⭐ - 3 Months", callback_data="buy_250")],
-        [InlineKeyboardButton("💳 400⭐ - 6 Months", callback_data="buy_400")],
-        [InlineKeyboardButton("💳 700⭐ - 1 Year", callback_data="buy_700")],
-        [InlineKeyboardButton("🔙 Back", callback_data="start")]
-    ]
-    
-    await callback_query.message.edit_text(
-        script.BPREMIUM_TXT,
-        reply_markup=InlineKeyboardMarkup(buttons)
-    )
-
-@Client.on_callback_query(filters.regex("^(reffff|free|close_data)$"))
-async def other_callbacks(client, callback_query):
-    if callback_query.data == "close_data":
-        await callback_query.message.delete()
-    elif callback_query.data == "reffff":
-        await callback_query.answer("Referral system coming soon!", show_alert=True)
-    elif callback_query.data == "free":
-        await callback_query.answer("Free trial coming soon!", show_alert=True)
