@@ -266,6 +266,7 @@ def register_pre_checkout_handler(client):
 
 
 # Payment successful handler - only if available
+# In Pyrogram v2.x, use filters.successful_payment as a decorator
 @Client.on_message(filters.successful_payment)
 async def successful_premium_payment(client, message):
     try:
