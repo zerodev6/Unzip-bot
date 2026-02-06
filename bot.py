@@ -1,5 +1,7 @@
 import logging
 import asyncio
+import signal
+import sys
 from pyrogram import Client, idle
 from info import API_ID, API_HASH, BOT_TOKEN, STRING_SESSION
 from database.users_chats_db import db
@@ -11,6 +13,14 @@ logging.basicConfig(
 )
 
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
+
+# Signal handler for graceful shutdown
+def signal_handler(signum, frame):
+    print("\n🛑 Received shutdown signal...")
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
 
 class Bot(Client):
     def __init__(self):
@@ -66,7 +76,7 @@ if STRING_SESSION:
 
         async def stop(self, *args):
             await super().stop()
-            logging.info("UserBot stopped!"")
+            logging.info("UserBot stopped!")  # FIXED: Removed extra quote
 
     user_bot = UserBot()
 else:
@@ -80,7 +90,7 @@ async def main():
         if user_bot:
             await user_bot.start()
         
-        # IMPORTANT: Use idle() to keep the bot running and processing messages
+        # Keep the bot running and process messages
         await idle()
         
     except KeyboardInterrupt:
