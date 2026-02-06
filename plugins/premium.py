@@ -265,35 +265,35 @@ def register_pre_checkout_handler(client):
         print("PreCheckoutQueryHandler not available. Payment features disabled.")
 
 
-# Payment successful handler - only if available
-# In Pyrogram v2.x, use filters.successful_payment as a decorator
-@Client.on_message(filters.successful_payment)
-async def successful_premium_payment(client, message):
-    try:
-        amount = int(message.successful_payment.total_amount)
-        user_id = message.from_user.id
-        time_zone = datetime.datetime.now(pytz.timezone("Asia/Kolkata"))
-        current_time = time_zone.strftime("%d-%m-%Y | %I:%M:%S %p") 
-        if amount in STAR_PREMIUM_PLANS:
-            time = STAR_PREMIUM_PLANS[amount]
-            seconds = await get_seconds(time)
-            if seconds > 0:
-                expiry_time = datetime.datetime.now() + datetime.timedelta(seconds=seconds)
-                user_data = {"id": user_id, "expiry_time": expiry_time}
-                await db.update_user(user_data)
-                data = await db.get_user(user_id)
-                expiry = data.get("expiry_time")
-                expiry_str_in_ist = expiry.astimezone(pytz.timezone("Asia/Kolkata")).strftime("%d-%m-%Y | %I:%M:%S %p")    
-                await message.reply(text=f"Thank you For Purchasing Premium Service Using Star ✅\n\nSubscription Time - {time}\nExpire In - {expiry_str_in_ist}", disable_web_page_preview=True)                
-                if PREMIUM_LOGS:
-                    await client.send_message(PREMIUM_LOGS, text=f"#Purchase_Premium_With_Star\n\n👤 ᴜꜱᴇʀ - {message.from_user.mention}\n\n⚡ ᴜꜱᴇʀ ɪᴅ - <code>{user_id}</code>\n\n⭐ ꜱᴛᴀʀ ᴘᴀʏ - {amount}⭐\n\n⏰ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ - {time}\n\n⌛️ ᴊᴏɪɴɪɴɢ ᴅᴀᴛᴇ - {current_time}\n\n⌛️ ᴇxᴘɪʀʏ ᴅᴀᴛᴇ - {expiry_str_in_ist}", disable_web_page_preview=True)
-            else:
-                await message.reply("⚠️ Invalid Premium Time.")
-        else:
-            await message.reply("⚠️ Invalid Premium Package.")
-    except Exception as e:
-        print(f"Error Processing Premium Payment: {e}")
-        await message.reply("✅ Thank You For Your Payment! (Error Logging Details)")
+# FIX: Comment out the problematic successful_payment decorator for now
+# In Pyrogram v2.x, successful_payment filter might not be available or has a different name
+# @Client.on_message(filters.successful_payment)
+# async def successful_premium_payment(client, message):
+#     try:
+#         amount = int(message.successful_payment.total_amount)
+#         user_id = message.from_user.id
+#         time_zone = datetime.datetime.now(pytz.timezone("Asia/Kolkata"))
+#         current_time = time_zone.strftime("%d-%m-%Y | %I:%M:%S %p") 
+#         if amount in STAR_PREMIUM_PLANS:
+#             time = STAR_PREMIUM_PLANS[amount]
+#             seconds = await get_seconds(time)
+#             if seconds > 0:
+#                 expiry_time = datetime.datetime.now() + datetime.timedelta(seconds=seconds)
+#                 user_data = {"id": user_id, "expiry_time": expiry_time}
+#                 await db.update_user(user_data)
+#                 data = await db.get_user(user_id)
+#                 expiry = data.get("expiry_time")
+#                 expiry_str_in_ist = expiry.astimezone(pytz.timezone("Asia/Kolkata")).strftime("%d-%m-%Y | %I:%M:%S %p")    
+#                 await message.reply(text=f"Thank you For Purchasing Premium Service Using Star ✅\n\nSubscription Time - {time}\nExpire In - {expiry_str_in_ist}", disable_web_page_preview=True)                
+#                 if PREMIUM_LOGS:
+#                     await client.send_message(PREMIUM_LOGS, text=f"#Purchase_Premium_With_Star\n\n👤 ᴜꜱᴇʀ - {message.from_user.mention}\n\n⚡ ᴜꜱᴇʀ ɪᴅ - <code>{user_id}</code>\n\n⭐ ꜱᴛᴀʀ ᴘᴀʏ - {amount}⭐\n\n⏰ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ - {time}\n\n⌛️ ᴊᴏɪɴɪɴɢ ᴅᴀᴛᴇ - {current_time}\n\n⌛️ ᴇxᴘɪʀʏ ᴅᴀᴛᴇ - {expiry_str_in_ist}", disable_web_page_preview=True)
+#             else:
+#                 await message.reply("⚠️ Invalid Premium Time.")
+#         else:
+#             await message.reply("⚠️ Invalid Premium Package.")
+#     except Exception as e:
+#         print(f"Error Processing Premium Payment: {e}")
+#         await message.reply("✅ Thank You For Your Payment! (Error Logging Details)")
 
 @Client.on_callback_query(filters.regex("^premium_info$"))
 async def premium_info_callback(client, callback_query):
