@@ -19,7 +19,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create downloads directory
-RUN mkdir -p downloads
+RUN mkdir -p downloads downloads/thumbnails
+
+# Expose port for web server
+EXPOSE 8080
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
