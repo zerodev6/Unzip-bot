@@ -161,16 +161,31 @@ async def set_thumbnail(client, message):
     
     user_id = message.from_user.id
     
-    # Download thumbnail
-    thumb_path = f"downloads/{user_id}_thumb.jpg"
-    os.makedirs("downloads", exist_ok=True)
-    
-    await reply.download(thumb_path)
-    
-    # Save to database
-    await db.set_thumbnail(user_id, thumb_path)
-    
-    await message.reply("✅ ᴛʜᴜᴍʙɴᴀɪʟ ꜱᴀᴠᴇᴅ ꜱᴜᴄᴄᴇꜱꜱғᴜʟʟʏ!")
+    try:
+        # Create thumbnails directory
+        thumb_dir = "downloads/thumbnails"
+        os.makedirs(thumb_dir, exist_ok=True)
+        
+        # Download thumbnail
+        thumb_path = f"{thumb_dir}/{user_id}_thumb.jpg"
+        
+        await reply.download(thumb_path)
+        
+        # Verify file was downloaded
+        if not os.path.exists(thumb_path) or os.path.getsize(thumb_path) == 0:
+            await message.reply("❌ ғᴀɪʟᴇᴅ ᴛᴏ ᴅᴏᴡɴʟᴏᴀᴅ ᴛʜᴜᴍʙɴᴀɪʟ!")
+            return
+        
+        # Save to database
+        await db.set_thumbnail(user_id, thumb_path)
+        
+        await message.reply_photo(
+            photo=thumb_path,
+            caption="✅ ᴛʜᴜᴍʙɴᴀɪʟ ꜱᴀᴠᴇᴅ ꜱᴜᴄᴄᴇꜱꜱғᴜʟʟʏ!"
+        )
+    except Exception as e:
+        logging.error(f"Error setting thumbnail: {e}")
+        await message.reply(f"❌ ᴇʀʀᴏʀ: {str(e)}")
 
 @app.on_message(filters.command("del_thumbnail") & filters.private)
 async def delete_thumbnail(client, message):
@@ -179,15 +194,23 @@ async def delete_thumbnail(client, message):
     
     user_id = message.from_user.id
     
-    # Delete from database
-    await db.delete_thumbnail(user_id)
-    
-    # Delete file
-    thumb_path = f"downloads/{user_id}_thumb.jpg"
-    if os.path.exists(thumb_path):
-        os.remove(thumb_path)
-    
-    await message.reply("✅ ᴛʜᴜᴍʙɴᴀɪʟ ᴅᴇʟᴇᴛᴇᴅ ꜱᴜᴄᴄᴇꜱꜱғᴜʟʟʏ!")
+    try:
+        # Get thumbnail path from database
+        thumb_data = await db.get_thumbnail(user_id)
+        
+        # Delete from database
+        await db.delete_thumbnail(user_id)
+        
+        # Delete file if exists
+        if thumb_data and thumb_data.get("thumbnail"):
+            thumb_path = thumb_data.get("thumbnail")
+            if os.path.exists(thumb_path):
+                os.remove(thumb_path)
+        
+        await message.reply("✅ ᴛʜᴜᴍʙɴᴀɪʟ ᴅᴇʟᴇᴛᴇᴅ ꜱᴜᴄᴄᴇꜱꜱғᴜʟʟʏ!")
+    except Exception as e:
+        logging.error(f"Error deleting thumbnail: {e}")
+        await message.reply("✅ ᴛʜᴜᴍʙɴᴀɪʟ ᴅᴇʟᴇᴛᴇᴅ!")
 
 @app.on_message(filters.command("show_thumbnail") & filters.private)
 async def show_thumbnail(client, message):
@@ -262,7 +285,11 @@ async def upload_mode_callback(client, callback_query):
     # Start extraction
     status_msg = await callback_query.message.reply("📥 ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ...")
     
+    download_path = None
     try:
+        # Check premium status
+        is_premium = await db.is_premium_user(user_id)
+        
         # Download file
         download_path = f"downloads/{user_id}/"
         os.makedirs(download_path, exist_ok=True)
@@ -277,88 +304,138 @@ async def upload_mode_callback(client, callback_query):
             progress_args=(status_msg, start_time, "📥 ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ...")
         )
         
+        # Verify file was downloaded
+        if not os.path.exists(file_path):
+            await status_msg.edit("❌ ᴇʀʀᴏʀ: Failed to download file")
+            return
+        
         # Extract archive
         await status_msg.edit("🗜️ ᴇxᴛʀᴀᴄᴛɪɴɢ ғɪʟᴇꜱ...")
         
         extract_path = f"downloads/{user_id}/extracted/"
         os.makedirs(extract_path, exist_ok=True)
         
-        if file.file_name.endswith('.zip'):
-            with zipfile.ZipFile(file_path, 'r') as zip_ref:
-                zip_ref.extractall(extract_path)
-        elif file.file_name.endswith('.rar'):
-            with rarfile.RarFile(file_path, 'r') as rar_ref:
-                rar_ref.extractall(extract_path)
-        elif file.file_name.endswith('.7z'):
-            with py7zr.SevenZipFile(file_path, 'r') as sevenz_ref:
-                sevenz_ref.extractall(extract_path)
-        elif file.file_name.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
-            with tarfile.open(file_path, 'r:*') as tar_ref:
-                tar_ref.extractall(extract_path)
+        try:
+            if file.file_name.endswith('.zip'):
+                with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                    zip_ref.extractall(extract_path)
+            elif file.file_name.endswith('.rar'):
+                with rarfile.RarFile(file_path, 'r') as rar_ref:
+                    rar_ref.extractall(extract_path)
+            elif file.file_name.endswith('.7z'):
+                with py7zr.SevenZipFile(file_path, 'r') as sevenz_ref:
+                    sevenz_ref.extractall(extract_path)
+            elif file.file_name.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
+                with tarfile.open(file_path, 'r:*') as tar_ref:
+                    tar_ref.extractall(extract_path)
+        except Exception as e:
+            await status_msg.edit(f"❌ ᴇxᴛʀᴀᴄᴛɪᴏɴ ғᴀɪʟᴇᴅ: {str(e)}")
+            if os.path.exists(download_path):
+                shutil.rmtree(download_path)
+            return
         
         # Get thumbnail
-        thumb_data = await db.get_thumbnail(user_id)
-        thumb_path = thumb_data.get("thumbnail") if thumb_data else None
+        thumb_path = None
+        try:
+            thumb_data = await db.get_thumbnail(user_id)
+            if thumb_data and thumb_data.get("thumbnail"):
+                thumb_path = thumb_data.get("thumbnail")
+                # Verify thumbnail exists
+                if not os.path.exists(thumb_path):
+                    thumb_path = None
+        except Exception as e:
+            logging.error(f"Error getting thumbnail: {e}")
+            thumb_path = None
+        
+        # Count total files
+        total_files = sum([len(files) for _, _, files in os.walk(extract_path)])
+        
+        if total_files == 0:
+            await status_msg.edit("❌ ɴᴏ ғɪʟᴇꜱ ғᴏᴜɴᴅ ɪɴ ᴀʀᴄʜɪᴠᴇ")
+            if os.path.exists(download_path):
+                shutil.rmtree(download_path)
+            return
         
         # Upload files
-        await status_msg.edit("📤 ᴜᴘʟᴏᴀᴅɪɴɢ ғɪʟᴇꜱ...")
-        
-        # Choose client based on file size and availability
-        upload_client = user_client if user_client and is_premium else client
+        await status_msg.edit(f"📤 ᴜᴘʟᴏᴀᴅɪɴɢ {total_files} ғɪʟᴇ(s)...")
         
         uploaded_count = 0
+        failed_count = 0
+        
         for root, dirs, files in os.walk(extract_path):
             for filename in files:
                 file_to_upload = os.path.join(root, filename)
+                
+                # Skip if file doesn't exist or is empty
+                if not os.path.exists(file_to_upload):
+                    logging.warning(f"File not found: {file_to_upload}")
+                    failed_count += 1
+                    continue
+                
                 file_size = os.path.getsize(file_to_upload)
                 
+                if file_size == 0:
+                    logging.warning(f"Empty file skipped: {filename}")
+                    failed_count += 1
+                    continue
+                
                 try:
-                    # Use user client for files larger than 50MB (bot API limit)
-                    if file_size > 50 * 1024 * 1024 and user_client:
+                    # Choose client: user_client for large files if available
+                    current_client = client
+                    if file_size > 50 * 1024 * 1024 and user_client and is_premium:
                         current_client = user_client
-                    else:
-                        current_client = client
+                    
+                    # Update status
+                    progress_text = f"📤 ᴜᴘʟᴏᴀᴅɪɴɢ {uploaded_count + 1}/{total_files}\n📄 {filename[:30]}..."
                     
                     if mode == "video":
                         await current_client.send_video(
                             chat_id=callback_query.message.chat.id,
                             video=file_to_upload,
-                            caption=f"📹 {filename}\n💾 Size: {get_readable_file_size(file_size)}",
+                            caption=f"📹 {filename}\n💾 {get_readable_file_size(file_size)}",
                             thumb=thumb_path,
                             progress=progress_for_pyrogram,
-                            progress_args=(status_msg, time.time(), "📤 ᴜᴘʟᴏᴀᴅɪɴɢ...")
+                            progress_args=(status_msg, time.time(), progress_text)
                         )
                     else:
                         await current_client.send_document(
                             chat_id=callback_query.message.chat.id,
                             document=file_to_upload,
-                            caption=f"📄 {filename}\n💾 Size: {get_readable_file_size(file_size)}",
+                            caption=f"📄 {filename}\n💾 {get_readable_file_size(file_size)}",
                             thumb=thumb_path,
                             progress=progress_for_pyrogram,
-                            progress_args=(status_msg, time.time(), "📤 ᴜᴘʟᴏᴀᴅɪɴɢ...")
+                            progress_args=(status_msg, time.time(), progress_text)
                         )
                     
                     uploaded_count += 1
+                    
                 except Exception as e:
-                    logging.error(f"Error uploading file {filename}: {e}")
-                    try:
-                        await callback_query.message.reply_text(f"❌ Failed to upload: {filename}\nError: {str(e)}")
-                    except:
-                        pass
+                    logging.error(f"Error uploading {filename}: {e}")
+                    failed_count += 1
                     continue
         
-        await status_msg.edit(f"✅ ᴄᴏᴍᴘʟᴇᴛᴇᴅ!\n\n📤 ᴜᴘʟᴏᴀᴅᴇᴅ: {uploaded_count} ғɪʟᴇꜱ")
+        # Final status
+        result_text = f"✅ ᴄᴏᴍᴘʟᴇᴛᴇᴅ!\n\n"
+        result_text += f"📤 ᴜᴘʟᴏᴀᴅᴇᴅ: {uploaded_count} ғɪʟᴇ(s)\n"
+        if failed_count > 0:
+            result_text += f"❌ ғᴀɪʟᴇᴅ: {failed_count} ғɪʟᴇ(s)"
         
-        # Cleanup
-        shutil.rmtree(download_path)
+        await status_msg.edit(result_text)
         
     except Exception as e:
         logging.error(f"Error processing file: {e}")
-        await status_msg.edit(f"❌ ᴇʀʀᴏʀ: {str(e)}")
-        
-        # Cleanup on error
-        if os.path.exists(download_path):
-            shutil.rmtree(download_path)
+        try:
+            await status_msg.edit(f"❌ ᴇʀʀᴏʀ: {str(e)[:100]}")
+        except:
+            pass
+    
+    finally:
+        # Cleanup
+        try:
+            if download_path and os.path.exists(download_path):
+                shutil.rmtree(download_path)
+        except Exception as e:
+            logging.error(f"Cleanup error: {e}")
 
 # Handle torrent/magnet links
 @app.on_message(filters.text & filters.private)
@@ -414,16 +491,47 @@ async def callback_handler(client, callback_query):
 
 if __name__ == "__main__":
     print("Bot Started!")
+    
+    # Create downloads directory
+    os.makedirs("downloads", exist_ok=True)
+    os.makedirs("downloads/thumbnails", exist_ok=True)
+    
+    # Start web server for health checks (optional)
+    from aiohttp import web
+    
+    async def health_check(request):
+        return web.Response(text="Bot is running!")
+    
+    async def start_web_server():
+        app_web = web.Application()
+        app_web.router.add_get("/", health_check)
+        runner = web.AppRunner(app_web)
+        await runner.setup()
+        site = web.TCPSite(runner, "0.0.0.0", Config.PORT)
+        await site.start()
+        print(f"Web server started on port {Config.PORT}")
+    
     if user_client:
         print("Starting with User Session for large file uploads (up to 4GB)")
         import asyncio
         loop = asyncio.get_event_loop()
         
         async def start_both():
+            # Start web server
+            await start_web_server()
+            # Start user client
             await user_client.start()
+            # Run bot
             await app.run()
         
         loop.run_until_complete(start_both())
     else:
         print("Starting without user session - upload limit: 50MB")
-        app.run()
+        import asyncio
+        loop = asyncio.get_event_loop()
+        
+        async def start_bot_with_server():
+            await start_web_server()
+            await app.run()
+        
+        loop.run_until_complete(start_bot_with_server())
