@@ -15,7 +15,7 @@ class Config:
     DATABASE_URL = "mongodb+srv://vsandeepa183_db_user:venura8907@cluster0.o1c53d4.mongodb.net/?appName=Cluster0"
     
     # Admin Configuration
-    ADMINS = list(set(int(x) for x in environ.get("ADMINS", "").split()))
+    ADMINS = "8498741978"
     
     # Channels Configuration
     FORCE_SUB_CHANNELS = environ.get("FORCE_SUB_CHANNELS", "").split()
@@ -37,4 +37,4 @@ class Config:
     
     # Other Settings
     DOWNLOAD_LOCATION = "./downloads/"
-    BOT_USERNAME = environ.get("BOT_USERNAME", "")
+    BOT_USERNAME = "@unzip_z_bot"
