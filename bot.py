@@ -22,17 +22,13 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
-# Ensure required directories exist
-os.makedirs("downloads", exist_ok=True)
-os.makedirs("thumbnails", exist_ok=True)
-
 # Bot instance
 app = Client(
     "UnzipBot",
     api_id=Config.API_ID,
     api_hash=Config.API_HASH,
     bot_token=Config.BOT_TOKEN,
-    workers=100000000,
+    workers=50,
     sleep_threshold=10
 )
 
@@ -68,12 +64,9 @@ async def start_command(client, message):
         return
     
     # Show loading animation
-    try:
-        loading_msg = await message.reply("⏳")
-        await asyncio.sleep(2)
-        await loading_msg.delete()
-    except:
-        pass
+    loading_msg = await message.reply("⏳")
+    await asyncio.sleep(2)
+    await loading_msg.delete()
     
     # Add user to database
     await db.add_user(user_id)
@@ -93,18 +86,11 @@ async def start_command(client, message):
         ]
     ]
     
-    try:
-        await message.reply_photo(
-            photo=welcome_image,
-            caption=script.START_TXT.format(message.from_user.mention),
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
-    except Exception as e:
-        logging.error(f"Error sending welcome message: {e}")
-        await message.reply_text(
-            script.START_TXT.format(message.from_user.mention),
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
+    await message.reply_photo(
+        photo=welcome_image,
+        caption=script.START_TXT.format(message.from_user.mention),
+        reply_markup=InlineKeyboardMarkup(buttons)
+    )
 
 @app.on_message(filters.command("help") & filters.private)
 async def help_command(client, message):
@@ -144,7 +130,7 @@ async def user_info(client, message):
     user_id = user.id
     
     # Get user data from database
-    user_data_db = await db.get_user(user_id)
+    user_data = await db.get_user(user_id)
     is_premium = await db.is_premium_user(user_id)
     
     info_text = f"""
@@ -157,11 +143,11 @@ async def user_info(client, message):
 <b>📦 ғɪʟᴇ ʟɪᴍɪᴛ:</b> {'4GB' if is_premium else '2GB'}
     """
     
-    buttons = [[InlineKeyboardButton("💎 ɢᴇᴛ ᴘʀᴇᴍɪᴜᴍ", callback_data="premium_info")]] if not is_premium else []
+    buttons = [[InlineKeyboardButton("💎 ɢᴇᴛ ᴘʀᴇᴍɪᴜᴍ", callback_data="premium_info")]]
     
     await message.reply_text(
         info_text,
-        reply_markup=InlineKeyboardMarkup(buttons) if buttons else None
+        reply_markup=InlineKeyboardMarkup(buttons) if not is_premium else None
     )
 
 @app.on_message(filters.command("set_thumbnail") & filters.private)
@@ -176,19 +162,15 @@ async def set_thumbnail(client, message):
     user_id = message.from_user.id
     
     # Download thumbnail
-    thumb_path = f"thumbnails/{user_id}_thumb.jpg"
-    os.makedirs("thumbnails", exist_ok=True)
+    thumb_path = f"downloads/{user_id}_thumb.jpg"
+    os.makedirs("downloads", exist_ok=True)
     
-    try:
-        await reply.download(thumb_path)
-        
-        # Save to database
-        await db.set_thumbnail(user_id, thumb_path)
-        
-        await message.reply("✅ ᴛʜᴜᴍʙɴᴀɪʟ ꜱᴀᴠᴇᴅ ꜱᴜᴄᴄᴇꜱꜱғᴜʟʟʏ!")
-    except Exception as e:
-        logging.error(f"Error setting thumbnail: {e}")
-        await message.reply(f"❌ ᴇʀʀᴏʀ ꜱᴀᴠɪɴɢ ᴛʜᴜᴍʙɴᴀɪʟ: {str(e)}")
+    await reply.download(thumb_path)
+    
+    # Save to database
+    await db.set_thumbnail(user_id, thumb_path)
+    
+    await message.reply("✅ ᴛʜᴜᴍʙɴᴀɪʟ ꜱᴀᴠᴇᴅ ꜱᴜᴄᴄᴇꜱꜱғᴜʟʟʏ!")
 
 @app.on_message(filters.command("del_thumbnail") & filters.private)
 async def delete_thumbnail(client, message):
@@ -197,19 +179,15 @@ async def delete_thumbnail(client, message):
     
     user_id = message.from_user.id
     
-    try:
-        # Delete from database
-        await db.delete_thumbnail(user_id)
-        
-        # Delete file
-        thumb_path = f"thumbnails/{user_id}_thumb.jpg"
-        if os.path.exists(thumb_path):
-            os.remove(thumb_path)
-        
-        await message.reply("✅ ᴛʜᴜᴍʙɴᴀɪʟ ᴅᴇʟᴇᴛᴇᴅ ꜱᴜᴄᴄᴇꜱꜱғᴜʟʟʏ!")
-    except Exception as e:
-        logging.error(f"Error deleting thumbnail: {e}")
-        await message.reply(f"❌ ᴇʀʀᴏʀ ᴅᴇʟᴇᴛɪɴɢ ᴛʜᴜᴍʙɴᴀɪʟ: {str(e)}")
+    # Delete from database
+    await db.delete_thumbnail(user_id)
+    
+    # Delete file
+    thumb_path = f"downloads/{user_id}_thumb.jpg"
+    if os.path.exists(thumb_path):
+        os.remove(thumb_path)
+    
+    await message.reply("✅ ᴛʜᴜᴍʙɴᴀɪʟ ᴅᴇʟᴇᴛᴇᴅ ꜱᴜᴄᴄᴇꜱꜱғᴜʟʟʏ!")
 
 @app.on_message(filters.command("show_thumbnail") & filters.private)
 async def show_thumbnail(client, message):
@@ -219,92 +197,15 @@ async def show_thumbnail(client, message):
     user_id = message.from_user.id
     thumb_data = await db.get_thumbnail(user_id)
     
-    if not thumb_data or not thumb_data.get("thumbnail"):
+    if not thumb_data or not os.path.exists(thumb_data.get("thumbnail")):
         return await message.reply("❌ ɴᴏ ᴛʜᴜᴍʙɴᴀɪʟ ꜱᴇᴛ!")
     
-    thumb_path = thumb_data["thumbnail"]
-    
-    if not os.path.exists(thumb_path):
-        return await message.reply("❌ ᴛʜᴜᴍʙɴᴀɪʟ ғɪʟᴇ ɴᴏᴛ ғᴏᴜɴᴅ!")
-    
-    try:
-        await message.reply_photo(
-            photo=thumb_path,
-            caption="✨ ʏᴏᴜʀ ᴄᴜʀʀᴇɴᴛ ᴛʜᴜᴍʙɴᴀɪʟ"
-        )
-    except Exception as e:
-        logging.error(f"Error showing thumbnail: {e}")
-        await message.reply(f"❌ ᴇʀʀᴏʀ ᴅɪꜱᴘʟᴀʏɪɴɢ ᴛʜᴜᴍʙɴᴀɪʟ: {str(e)}")
+    await message.reply_photo(
+        photo=thumb_data["thumbnail"],
+        caption="✨ ʏᴏᴜʀ ᴄᴜʀʀᴇɴᴛ ᴛʜᴜᴍʙɴᴀɪʟ"
+    )
 
-@app.on_message(filters.command("stats") & filters.private)
-async def stats_command(client, message):
-    """Admin command to view bot statistics"""
-    user_id = message.from_user.id
-    
-    # Check if user is admin
-    if user_id not in Config.ADMINS:
-        return await message.reply("❌ ᴛʜɪꜱ ᴄᴏᴍᴍᴀɴᴅ ɪꜱ ᴏɴʟʏ ғᴏʀ ᴀᴅᴍɪɴꜱ!")
-    
-    try:
-        total_users = await db.total_users_count()
-        premium_users = await db.premium_users_count()
-        
-        stats_text = f"""
-📊 <b>ʙᴏᴛ ꜱᴛᴀᴛɪꜱᴛɪᴄꜱ</b>
-
-👥 <b>ᴛᴏᴛᴀʟ ᴜꜱᴇʀꜱ:</b> {total_users}
-💎 <b>ᴘʀᴇᴍɪᴜᴍ ᴜꜱᴇʀꜱ:</b> {premium_users}
-🆓 <b>ғʀᴇᴇ ᴜꜱᴇʀꜱ:</b> {total_users - premium_users}
-        """
-        
-        await message.reply_text(stats_text)
-    except Exception as e:
-        logging.error(f"Error getting stats: {e}")
-        await message.reply(f"❌ ᴇʀʀᴏʀ: {str(e)}")
-
-@app.on_message(filters.command("broadcast") & filters.private)
-async def broadcast_command(client, message):
-    """Admin command to broadcast message to all users"""
-    user_id = message.from_user.id
-    
-    # Check if user is admin
-    if user_id not in Config.ADMINS:
-        return await message.reply("❌ ᴛʜɪꜱ ᴄᴏᴍᴍᴀɴᴅ ɪꜱ ᴏɴʟʏ ғᴏʀ ᴀᴅᴍɪɴꜱ!")
-    
-    reply = message.reply_to_message
-    if not reply:
-        return await message.reply("❌ ᴘʟᴇᴀꜱᴇ ʀᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇꜱꜱᴀɢᴇ ᴛᴏ ʙʀᴏᴀᴅᴄᴀꜱᴛ!")
-    
-    try:
-        users = await db.get_all_users()
-        success = 0
-        failed = 0
-        
-        status_msg = await message.reply(f"📡 ʙʀᴏᴀᴅᴄᴀꜱᴛɪɴɢ...\n\n✅ ꜱᴜᴄᴄᴇꜱꜱ: {success}\n❌ ғᴀɪʟᴇᴅ: {failed}")
-        
-        for user in users:
-            try:
-                await reply.copy(user['user_id'])
-                success += 1
-            except Exception as e:
-                failed += 1
-                logging.error(f"Failed to broadcast to {user['user_id']}: {e}")
-            
-            # Update status every 10 users
-            if (success + failed) % 10 == 0:
-                try:
-                    await status_msg.edit(f"📡 ʙʀᴏᴀᴅᴄᴀꜱᴛɪɴɢ...\n\n✅ ꜱᴜᴄᴄᴇꜱꜱ: {success}\n❌ ғᴀɪʟᴇᴅ: {failed}")
-                except:
-                    pass
-            
-            await asyncio.sleep(0.1)  # Avoid flood
-        
-        await status_msg.edit(f"✅ ʙʀᴏᴀᴅᴄᴀꜱᴛ ᴄᴏᴍᴘʟᴇᴛᴇᴅ!\n\n✅ ꜱᴜᴄᴄᴇꜱꜱ: {success}\n❌ ғᴀɪʟᴇᴅ: {failed}")
-    except Exception as e:
-        logging.error(f"Broadcast error: {e}")
-        await message.reply(f"❌ ᴇʀʀᴏʀ: {str(e)}")
-
-@app.on_message((filters.document | filters.video) & filters.private)
+@app.on_message(filters.document | filters.video & filters.private)
 async def handle_file(client, message: Message):
     if not await check_user_subscription(client, message):
         return
@@ -316,7 +217,7 @@ async def handle_file(client, message: Message):
     is_archive = file.file_name.lower().endswith(('.zip', '.rar', '.7z', '.tar', '.tar.gz', '.tgz', '.tar.bz2'))
     
     if not is_archive:
-        return await message.reply("❌ ᴘʟᴇᴀꜱᴇ ꜱᴇɴᴅ ᴀ ᴠᴀʟɪᴅ ᴀʀᴄʜɪᴠᴇ ғɪʟᴇ!\n\n📦 ꜱᴜᴘᴘᴏʀᴛᴇᴅ ғᴏʀᴍᴀᴛꜱ: .zip, .rar, .7z, .tar, .tar.gz")
+        return await message.reply("❌ ᴘʟᴇᴀꜱᴇ ꜱᴇɴᴅ ᴀ ᴠᴀʟɪᴅ ᴀʀᴄʜɪᴠᴇ ғɪʟᴇ!")
     
     # Check file size limit
     is_premium = await db.is_premium_user(user_id)
@@ -324,9 +225,9 @@ async def handle_file(client, message: Message):
     
     if file.file_size > max_size:
         limit_text = "4GB" if is_premium else "2GB"
-        premium_msg = "\n\n💎 ᴜᴘɢʀᴀᴅᴇ ᴛᴏ ᴘʀᴇᴍɪᴜᴍ ғᴏʀ 4GB ʟɪᴍɪᴛ" if not is_premium else ""
         return await message.reply(
-            f"❌ ғɪʟᴇ ꜱɪᴢᴇ ᴇxᴄᴇᴇᴅꜱ {limit_text} ʟɪᴍɪᴛ!{premium_msg}"
+            f"❌ ғɪʟᴇ ꜱɪᴢᴇ ᴇxᴄᴇᴇᴅꜱ {limit_text} ʟɪᴍɪᴛ!\n\n"
+            f"💎 ᴜᴘɢʀᴀᴅᴇ ᴛᴏ ᴘʀᴇᴍɪᴜᴍ ғᴏʀ 4GB ʟɪᴍɪᴛ" if not is_premium else ""
         )
     
     # Ask for upload mode
@@ -353,21 +254,13 @@ async def upload_mode_callback(client, callback_query):
     msg_id = int(msg_id)
     
     # Get the message
-    try:
-        message = await client.get_messages(user_id, msg_id)
-    except Exception as e:
-        logging.error(f"Error getting message: {e}")
-        await callback_query.answer("❌ ᴇʀʀᴏʀ: ᴍᴇꜱꜱᴀɢᴇ ɴᴏᴛ ғᴏᴜɴᴅ!", show_alert=True)
-        return
-    
+    message = await client.get_messages(user_id, msg_id)
     file = message.document or message.video
     
     await callback_query.message.delete()
     
     # Start extraction
     status_msg = await callback_query.message.reply("📥 ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ...")
-    
-    download_path = None
     
     try:
         # Download file
@@ -384,147 +277,96 @@ async def upload_mode_callback(client, callback_query):
             progress_args=(status_msg, start_time, "📥 ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ...")
         )
         
-        # Verify file downloaded
-        if not os.path.exists(file_path):
-            raise Exception("Download failed - file not found")
-        
         # Extract archive
         await status_msg.edit("🗜️ ᴇxᴛʀᴀᴄᴛɪɴɢ ғɪʟᴇꜱ...")
         
         extract_path = f"downloads/{user_id}/extracted/"
         os.makedirs(extract_path, exist_ok=True)
         
-        try:
-            if file.file_name.endswith('.zip'):
-                with zipfile.ZipFile(file_path, 'r') as zip_ref:
-                    zip_ref.extractall(extract_path)
-            elif file.file_name.endswith('.rar'):
-                with rarfile.RarFile(file_path, 'r') as rar_ref:
-                    rar_ref.extractall(extract_path)
-            elif file.file_name.endswith('.7z'):
-                with py7zr.SevenZipFile(file_path, 'r') as sevenz_ref:
-                    sevenz_ref.extractall(extract_path)
-            elif file.file_name.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
-                with tarfile.open(file_path, 'r:*') as tar_ref:
-                    tar_ref.extractall(extract_path)
-        except Exception as e:
-            raise Exception(f"Extraction failed: {str(e)}")
+        if file.file_name.endswith('.zip'):
+            with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                zip_ref.extractall(extract_path)
+        elif file.file_name.endswith('.rar'):
+            with rarfile.RarFile(file_path, 'r') as rar_ref:
+                rar_ref.extractall(extract_path)
+        elif file.file_name.endswith('.7z'):
+            with py7zr.SevenZipFile(file_path, 'r') as sevenz_ref:
+                sevenz_ref.extractall(extract_path)
+        elif file.file_name.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
+            with tarfile.open(file_path, 'r:*') as tar_ref:
+                tar_ref.extractall(extract_path)
         
         # Get thumbnail
         thumb_data = await db.get_thumbnail(user_id)
-        thumb_path = None
-        if thumb_data and thumb_data.get("thumbnail"):
-            thumb_path = thumb_data["thumbnail"]
-            # Verify thumbnail exists
-            if not os.path.exists(thumb_path):
-                thumb_path = None
-        
-        # Get premium status
-        is_premium = await db.is_premium_user(user_id)
+        thumb_path = thumb_data.get("thumbnail") if thumb_data else None
         
         # Upload files
         await status_msg.edit("📤 ᴜᴘʟᴏᴀᴅɪɴɢ ғɪʟᴇꜱ...")
         
-        uploaded_count = 0
-        failed_count = 0
+        # Choose client based on file size and availability
+        upload_client = user_client if user_client and is_premium else client
         
+        uploaded_count = 0
         for root, dirs, files in os.walk(extract_path):
             for filename in files:
                 file_to_upload = os.path.join(root, filename)
-                
-                # Skip if file doesn't exist
-                if not os.path.exists(file_to_upload):
-                    continue
-                
                 file_size = os.path.getsize(file_to_upload)
                 
                 try:
-                    # Choose client based on file size and availability
-                    # Use user client for files larger than 50MB (bot API limit) if available
-                    if file_size > 50 * 1024 * 1024 and user_client and is_premium:
+                    # Use user client for files larger than 50MB (bot API limit)
+                    if file_size > 50 * 1024 * 1024 and user_client:
                         current_client = user_client
                     else:
                         current_client = client
-                    
-                    # Prepare caption
-                    caption = f"{'📹' if mode == 'video' else '📄'} {filename}\n💾 ꜱɪᴢᴇ: {get_readable_file_size(file_size)}"
                     
                     if mode == "video":
                         await current_client.send_video(
                             chat_id=callback_query.message.chat.id,
                             video=file_to_upload,
-                            caption=caption,
-                            thumb=thumb_path if thumb_path and os.path.exists(thumb_path) else None,
+                            caption=f"📹 {filename}\n💾 Size: {get_readable_file_size(file_size)}",
+                            thumb=thumb_path,
                             progress=progress_for_pyrogram,
-                            progress_args=(status_msg, time.time(), f"📤 ᴜᴘʟᴏᴀᴅɪɴɢ {uploaded_count + 1}...")
+                            progress_args=(status_msg, time.time(), "📤 ᴜᴘʟᴏᴀᴅɪɴɢ...")
                         )
                     else:
                         await current_client.send_document(
                             chat_id=callback_query.message.chat.id,
                             document=file_to_upload,
-                            caption=caption,
-                            thumb=thumb_path if thumb_path and os.path.exists(thumb_path) else None,
+                            caption=f"📄 {filename}\n💾 Size: {get_readable_file_size(file_size)}",
+                            thumb=thumb_path,
                             progress=progress_for_pyrogram,
-                            progress_args=(status_msg, time.time(), f"📤 ᴜᴘʟᴏᴀᴅɪɴɢ {uploaded_count + 1}...")
+                            progress_args=(status_msg, time.time(), "📤 ᴜᴘʟᴏᴀᴅɪɴɢ...")
                         )
                     
                     uploaded_count += 1
-                    
-                except FloodWait as e:
-                    logging.warning(f"FloodWait: {e.value} seconds")
-                    await asyncio.sleep(e.value)
-                    # Retry once
-                    try:
-                        if mode == "video":
-                            await current_client.send_video(
-                                chat_id=callback_query.message.chat.id,
-                                video=file_to_upload,
-                                caption=caption,
-                                thumb=thumb_path if thumb_path and os.path.exists(thumb_path) else None
-                            )
-                        else:
-                            await current_client.send_document(
-                                chat_id=callback_query.message.chat.id,
-                                document=file_to_upload,
-                                caption=caption,
-                                thumb=thumb_path if thumb_path and os.path.exists(thumb_path) else None
-                            )
-                        uploaded_count += 1
-                    except Exception as retry_error:
-                        logging.error(f"Error on retry uploading {filename}: {retry_error}")
-                        failed_count += 1
-                
                 except Exception as e:
                     logging.error(f"Error uploading file {filename}: {e}")
-                    failed_count += 1
+                    try:
+                        await callback_query.message.reply_text(f"❌ Failed to upload: {filename}\nError: {str(e)}")
+                    except:
+                        pass
                     continue
         
-        # Final status
-        final_msg = f"✅ ᴄᴏᴍᴘʟᴇᴛᴇᴅ!\n\n📤 ᴜᴘʟᴏᴀᴅᴇᴅ: {uploaded_count} ғɪʟᴇꜱ"
-        if failed_count > 0:
-            final_msg += f"\n❌ ғᴀɪʟᴇᴅ: {failed_count} ғɪʟᴇꜱ"
+        await status_msg.edit(f"✅ ᴄᴏᴍᴘʟᴇᴛᴇᴅ!\n\n📤 ᴜᴘʟᴏᴀᴅᴇᴅ: {uploaded_count} ғɪʟᴇꜱ")
         
-        await status_msg.edit(final_msg)
+        # Cleanup
+        shutil.rmtree(download_path)
         
     except Exception as e:
         logging.error(f"Error processing file: {e}")
         await status_msg.edit(f"❌ ᴇʀʀᴏʀ: {str(e)}")
-    
-    finally:
-        # Cleanup
-        if download_path and os.path.exists(download_path):
-            try:
-                shutil.rmtree(download_path)
-            except Exception as e:
-                logging.error(f"Error cleaning up: {e}")
+        
+        # Cleanup on error
+        if os.path.exists(download_path):
+            shutil.rmtree(download_path)
 
 # Handle torrent/magnet links
-@app.on_message(filters.text & filters.private & ~filters.command(["start", "help", "about", "info", "set_thumbnail", "del_thumbnail", "show_thumbnail", "stats", "broadcast"]))
+@app.on_message(filters.text & filters.private)
 async def handle_torrent(client, message: Message):
     if not await check_user_subscription(client, message):
         return
     
-    text = message.text.strip()
+    text = message.text
     
     # Check if it's a magnet link or torrent URL
     if text.startswith("magnet:?") or text.endswith(".torrent"):
@@ -538,20 +380,9 @@ async def handle_torrent(client, message: Message):
 async def callback_handler(client, callback_query):
     data = callback_query.data
     
-    # Handle mode callbacks separately
-    if data.startswith("mode_"):
-        return
-    
     if data == "start":
         await callback_query.message.delete()
-        # Create a fake message object for start_command
-        fake_msg = type('obj', (object,), {
-            'from_user': callback_query.from_user,
-            'reply': callback_query.message.reply,
-            'reply_text': callback_query.message.reply_text,
-            'reply_photo': callback_query.message.reply_photo
-        })()
-        await start_command(client, fake_msg)
+        await start_command(client, callback_query.message)
     
     elif data == "help":
         buttons = [[InlineKeyboardButton("🏠 ʜᴏᴍᴇ", callback_data="start")]]
@@ -571,7 +402,7 @@ async def callback_handler(client, callback_query):
     
     elif data == "premium_info":
         buttons = [
-            [InlineKeyboardButton("💳 ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", url=f"https://t.me/{script.ADMIN_USERNAME.replace('@', '')}")],
+            [InlineKeyboardButton("💳 ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ", callback_data="buy_info")],
             [InlineKeyboardButton("🏠 ʜᴏᴍᴇ", callback_data="start")]
         ]
         await callback_query.message.edit_text(
@@ -579,30 +410,12 @@ async def callback_handler(client, callback_query):
             reply_markup=InlineKeyboardMarkup(buttons)
         )
     
-    elif data == "buy_info":
-        buttons = [
-            [InlineKeyboardButton("💬 ᴄᴏɴᴛᴀᴄᴛ ᴀᴅᴍɪɴ", url=f"https://t.me/{script.ADMIN_USERNAME.replace('@', '')}")],
-            [InlineKeyboardButton("🏠 ʜᴏᴍᴇ", callback_data="start")]
-        ]
-        await callback_query.message.edit_text(
-            "💎 <b>ʙᴜʏ ᴘʀᴇᴍɪᴜᴍ</b>\n\n"
-            "ᴄᴏɴᴛᴀᴄᴛ ᴀᴅᴍɪɴ ᴛᴏ ɢᴇᴛ ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴄᴇꜱꜱ!",
-            reply_markup=InlineKeyboardMarkup(buttons)
-        )
-    
     await callback_query.answer()
 
 if __name__ == "__main__":
-    print("=" * 50)
-    print("🤖 Unzip Bot Starting...")
-    print("=" * 50)
-    print(f"Port: 8080 (set PORT=8080 in environment)")
-    print(f"User Session: {'✅ Enabled' if user_client else '❌ Disabled'}")
-    print(f"Max Upload: {'4GB (with session)' if user_client else '50MB (bot only)'}")
-    print("=" * 50)
-    
+    print("Bot Started!")
     if user_client:
-        print("🚀 Starting with User Session for large file uploads (up to 4GB)")
+        print("Starting with User Session for large file uploads (up to 4GB)")
         import asyncio
         loop = asyncio.get_event_loop()
         
@@ -610,13 +423,7 @@ if __name__ == "__main__":
             await user_client.start()
             await app.run()
         
-        try:
-            loop.run_until_complete(start_both())
-        except KeyboardInterrupt:
-            print("\n⚠️ Bot stopped by user")
+        loop.run_until_complete(start_both())
     else:
-        print("⚠️ Starting without user session - upload limit: 50MB")
-        try:
-            app.run()
-        except KeyboardInterrupt:
-            print("\n⚠️ Bot stopped by user")
+        print("Starting without user session - upload limit: 50MB")
+        app.run()
