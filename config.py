@@ -12,7 +12,7 @@ class Config:
     SESSION_STRING = environ.get("SESSION_STRING", "")
     
     # Database
-    DATABASE_URL = environ.get("DATABASE_URL", "")
+    DATABASE_URL = "mongodb+srv://vsandeepa183_db_user:venura8907@cluster0.o1c53d4.mongodb.net/?appName=Cluster0"
     
     # Admin Configuration
     ADMINS = list(set(int(x) for x in environ.get("ADMINS", "").split()))
