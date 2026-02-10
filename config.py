@@ -3,9 +3,9 @@ from os import environ
 
 class Config:
     # Required Environment Variables
-    API_ID = int(environ.get("API_ID", "0"))
-    API_HASH = environ.get("API_HASH", "")
-    BOT_TOKEN = environ.get("BOT_TOKEN", "")
+    API_ID = "20288994"
+    API_HASH = "d702614912f1ad370a0d18786002adbf"
+    BOT_TOKEN = "8248221325:AAFLPwvn5wGzxYzDBs6GcZHVlqdpobm_X1w"
     
     # User Session String for uploading large files (up to 4GB)
     # Generate using: https://replit.com/@subinps/generatepyrogramsession
