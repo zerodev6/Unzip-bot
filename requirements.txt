@@ -6,3 +6,4 @@ pytz
 zipfile38
 rarfile
 py7zr
+aiohttp
