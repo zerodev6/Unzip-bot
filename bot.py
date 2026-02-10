@@ -28,7 +28,7 @@ app = Client(
     api_id=Config.API_ID,
     api_hash=Config.API_HASH,
     bot_token=Config.BOT_TOKEN,
-    workers=10000,
+    workers=50,
     sleep_threshold=10
 )
 
@@ -498,6 +498,8 @@ if __name__ == "__main__":
     
     # Start web server for health checks (optional)
     from aiohttp import web
+    import asyncio
+    from pyrogram import idle
     
     async def health_check(request):
         return web.Response(text="Bot is running!")
@@ -511,27 +513,27 @@ if __name__ == "__main__":
         await site.start()
         print(f"Web server started on port {Config.PORT}")
     
-    if user_client:
-        print("Starting with User Session for large file uploads (up to 4GB)")
-        import asyncio
-        loop = asyncio.get_event_loop()
+    async def main():
+        # Start web server
+        await start_web_server()
         
-        async def start_both():
-            # Start web server
-            await start_web_server()
-            # Start user client
+        # Start user client if available
+        if user_client:
+            print("Starting with User Session for large file uploads (up to 4GB)")
             await user_client.start()
-            # Run bot
-            await app.run()
+        else:
+            print("Starting without user session - upload limit: 50MB")
         
-        loop.run_until_complete(start_both())
-    else:
-        print("Starting without user session - upload limit: 50MB")
-        import asyncio
-        loop = asyncio.get_event_loop()
+        # Start bot
+        await app.start()
         
-        async def start_bot_with_server():
-            await start_web_server()
-            await app.run()
+        # Keep bot running
+        await idle()
         
-        loop.run_until_complete(start_bot_with_server())
+        # Stop bot
+        await app.stop()
+        if user_client:
+            await user_client.stop()
+    
+    # Run the main function
+    asyncio.run(main())
