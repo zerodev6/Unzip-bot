@@ -22,6 +22,8 @@ class Config:
     
     # Logs
     PREMIUM_LOGS = int(environ.get("PREMIUM_LOGS", "0"))
+
+    PORT = int(environ.get("PORT", "8080"))
     
     # Premium Plans (Star prices)
     STAR_PREMIUM_PLANS = {
