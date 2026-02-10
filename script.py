@@ -1,13 +1,9 @@
 class script(object):
     # START MESSAGE WITH ⏳ ANIMATION
     START_TXT = """<b>ʜᴇʏ, {}! 👋</b>
-
 <b>ɪ'ᴍ ᴀ ᴘᴏᴡᴇʀғᴜʟ ZIP ➝ UNZIP ʙᴏᴛ 🗜️</b>
 <b>ᴇxᴛʀᴀᴄᴛ & ᴄᴏᴍᴘʀᴇss ғɪʟᴇs ᴜᴘ ᴛᴏ 𝟺ɢʙ 💾</b>
-
-<b>🇱🇰 Greetings from Sri Lanka & 🇮🇳 India!</b>
 <b>ᴊᴜsᴛ sᴇɴᴅ ᴀ ZIP / RAR / FILE — ɢᴇᴛ ᴜɴᴢɪᴘᴘᴇᴅ ғɪʟᴇs ⚡</b>
-
 <b>💎 ᴘʀᴇᴍɪᴜᴍ: 4GB | 🆓 ғʀᴇᴇ: 2GB</b>"""
 
     GSTART_TXT = """<b>ʜᴇʏ, {}! ⏳</b>
